@@ -5,7 +5,13 @@ import ca_leginfo
 import unittest
 
 class CALegInfoClientTests(unittest.TestCase):
-    """TODO: These are currently live tests against the prod API and should be Mocked Out someday."""
+    """Integration tests for CALegInfoClient.
+    
+    These are "live" integration tests.  
+    
+    By design they use the live API and will fail if the upstream website
+      gets changed.
+    """
 
     def setUp(self):
         self._client = ca_leginfo.CALegInfoClient(session_id="20232024")
