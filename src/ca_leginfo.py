@@ -1,5 +1,5 @@
 """CA Leginfo API."""
-
+from typing import Sequence, Mapping
 import dataclasses
 import requests
 from bs4 import BeautifulSoup
@@ -10,7 +10,16 @@ import constants
 logging.basicConfig(level=logging.DEBUG)
 
 @dataclasses.dataclass
+class BillRecord:
+   """Container class for bill records, used by get_bill_list."""
+   bill_id: str = None
+   subject: str = None
+   author: str = None
+   status: str = None
+
+@dataclasses.dataclass
 class BillStatus:
+   """Container class for bill status."""
    lead_author: str = None
    topic: str = None
    house_location: str = None
@@ -25,26 +34,48 @@ def _get_bill_identifier(session_id: str, bill_id: str ) -> str:
 class CALegInfoClient:
   """Client for interacting with CA Leginfo."""
 
-  def __init__(self, session_id: str):
-    """Initializes CALegInfoClient.
+  def __init__(self):
+    """Initializes CALegInfoClient."""
+  
+  def get_bill_digest(self, bill_id: str):
+    """Scrapes the bill digest from a bill.
     
     Args:
-    session_id: A string that identifies the legislative session to
-        interact with (e.g. 20252026 for the 2025-2026 Legislative session).
+        bill_id: The bill ID including the session. e.g. 202320240AB1939
+
+    Returns:
+        The bill digest as a string, or None if not found.
     """
-    self._session_id = session_id
+    bill_text_url = constants.BILL_TEXT_QUERY + bill_id
+    try:
+      response = requests.get(bill_text_url)
+      response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+      soup = BeautifulSoup(response.content, "html.parser")
+      digest = soup.find(id='digesttext')
+
+      if digest:
+        return digest.text.strip()
+      else:
+        return None
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching URL: {e}")
+        return None
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        return None
 
   def get_bill_title(self, bill_id: str):
     """
     Scrapes the title of a bill from a given bill ID and session ID.
 
     Args:
-        bill_id: The bill ID.
+        bill_id: The bill ID including the session. e.g. 202320240AB1939
 
     Returns:
         The bill title as a string, or None if not found.
     """
-    bill_text_url = constants.BILL_TEXT_QUERY + _get_bill_identifier(self._session_id, bill_id)
+    bill_text_url = constants.BILL_TEXT_QUERY + bill_id
     logging.debug(bill_text_url)
 
     try:
@@ -66,9 +97,16 @@ class CALegInfoClient:
         logging.error(f"An unexpected error occurred: {e}")
         return None
     
-  def get_bill_status(self, bill_id:str) -> BillStatus:
-    """Returns author info, topic, last amended date, and history."""
-    bill_status_url = constants.BILL_STATUS_QUERY + _get_bill_identifier(self._session_id, bill_id)
+  def get_bill_status(self, bill_id: str) -> BillStatus:
+    """Returns author info, topic, last amended date, and history.
+    
+    Args:
+      bill_id: The bill ID including the session. e.g. 202320240AB1939
+
+    Returns:
+      The bill title as a string, or None if not found.
+    """
+    bill_status_url = constants.BILL_STATUS_QUERY + bill_id
     logging.debug(bill_status_url)
 
     status = BillStatus()
@@ -113,3 +151,49 @@ class CALegInfoClient:
       logging.error(f"An unexpected error occurred: {e}")
       return None
 
+  def get_bill_list(self, session_id: str, filter: str) -> Sequence:
+    """Get list of all bills for a session.
+    
+    Args:
+      session_id: string representing the leg session e.g. 20252026
+      filter: A string to filter on (remove bills containing.)
+        e.g. "Budget Act" to skip boring budget act bills.
+    
+    Returns:
+      A list of BillRecord containers.
+    """
+    bill_search_url = constants.BILL_SEARCH_QUERY + session_id
+    bill_list = []
+    try:
+      response = requests.get(bill_search_url)
+      response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+      soup = BeautifulSoup(response.content, 'html.parser')
+
+      bill_table = soup.find(id='bill_results')
+      tbody = bill_table.find('tbody')
+      bill_rows = tbody.find_all('tr')
+
+      for row in bill_rows:
+        bill_record = BillRecord()
+        cells = row.find_all('td')
+
+        # Schema is measure, subject, author, status.
+        measure = cells[0]
+        measure_link = measure.find('a', href=True)
+        bill_record.bill_id = measure_link['href'].split('=')[-1]
+        bill_record.subject = cells[1].text.strip()
+        bill_record.author = cells[2].text.strip()
+        bill_record.status = cells[3].text.strip()
+
+        # Append record if not filtered.
+        if filter not in bill_record.subject:
+          bill_list.append(bill_record)
+
+      return bill_list
+
+    except requests.exceptions.RequestException as e:
+      logging.error(f"Error fetching URL: {e}")
+      return None
+    except Exception as e:
+      logging.error(f"An unexpected error occurred: {e}")
+      return None

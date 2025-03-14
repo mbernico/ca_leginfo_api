@@ -17,19 +17,17 @@ class CALegInfoClientTests(unittest.TestCase):
     """
 
     def setUp(self):
-        self._client = ca_leginfo.CALegInfoClient(session_id="20232024")
+        self._client = ca_leginfo.CALegInfoClient()
 
     def test_get_bill_title(self):
         """Tests that get bill author can correctly return an author."""
-        got = self._client.get_bill_title(bill_id='AB1939')
+        got = self._client.get_bill_title(bill_id='202320240AB1939')
         want = "AB-1939 Pupil attendance"
         self.assertIn(want, got)
     
     def test_bill_status(self):
         """Tests that bill status returns properly."""
-        got = self._client.get_bill_status(bill_id='AB1939')
-        logging.debug(got)
-
+        got = self._client.get_bill_status(bill_id='202320240AB1939')
         self.assertEqual(got.lead_author, 'Maienschein (A)')
         self.assertEqual(got.topic,
                          'Pupil attendance: county and local school attendance review boards: pupil consultation.')
@@ -39,6 +37,20 @@ class CALegInfoClientTests(unittest.TestCase):
         self.assertEqual(got.history[0], 
                          {'date': '06/14/24', 
                           'action': 'Chaptered by Secretary of State - Chapter 13, Statutes of 2024.'})
+        
+    def test_bill_list_full_list(self):
+        """Tests that we can list all bills for a session."""
+        got = self._client.get_bill_list(session_id='20232024')
+        self.assertEqual(len(got), 5564)
+    
+    def test_bill_list_filtered_budget(self):
+        got = self._client.get_bill_list(session_id='20232024', filter="Budget Act")
+        self.assertEqual(len(got), 5443)
+    
+    def test_bill_digest_succeeds(self):
+        got = self._client.get_bill_digest(bill_id='202320240AB1939')
+        self.assertIn('Existing law authorizes the establishment of county school attendance review', got)
+                                         
 
 if __name__ == '__main__':
     unittest.main()
