@@ -1,6 +1,6 @@
 """Unit tests for ca_leginfo.py."""
 
-import ca_leginfo
+from . import ca_leginfo
 
 import unittest
 import logging

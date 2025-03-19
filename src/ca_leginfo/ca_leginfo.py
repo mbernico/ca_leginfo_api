@@ -5,7 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 
-import constants
+from . import constants
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -26,10 +26,6 @@ class BillStatus:
    last_amended: str = None
    committee_location: str = None
    history: list = dataclasses.field(default_factory=list)
-
-def _get_bill_identifier(session_id: str, bill_id: str ) -> str:
-  """Formats the session id and bill id so that it can be queried."""
-  return  session_id + "0" + bill_id
 
 class CALegInfoClient:
   """Client for interacting with CA Leginfo."""

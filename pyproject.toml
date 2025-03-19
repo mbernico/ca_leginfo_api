@@ -3,21 +3,24 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "CA LegInfo API"
-version = "0.0.1"
+name = "CALegInfo"
+version = "0.0.4"
 authors = [
   { name="Mike Bernico", email="mike.bernico@gmail.com" },
 ]
-description = "A small example package"
+description = "An API for interacting with CA Legislative Information at https://leginfo.legislature.ca.gov"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
-license = "APACHE2"
-license-files = ["LICEN[CS]E*"]
+license = {text = "Apache2"}
+dependencies = [
+    "requests",
+    "beautifulsoup4",
+]
 
 [project.urls]
-Homepage = "https://github.com/pypa/sampleproject"
-Issues = "https://github.com/pypa/sampleproject/issues"
+Homepage = "https://github.com/mbernico/ca_leginfo_api"
+Issues = "https://github.com/mbernico/ca_leginfo_api"
